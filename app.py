@@ -6,8 +6,50 @@ from competitor_identification import find_potential_competitors
 from agent_filtering import find_relevant_competitors
 from agents import OpenAIStreamingAgent, call_perplexity_search, call_groq_chatbot, CompetitiveChatAgent
 
+import streamlit as st
+import os
+from openai import OpenAI
+
+# Ask for OpenAI API Key and save it
+def get_and_store_api_key():
+    if "OPENAI_API_KEY" not in st.session_state:
+        st.session_state["OPENAI_API_KEY"] = None
+
+    # If no key in session, ask the user
+    if not st.session_state["OPENAI_API_KEY"]:
+        api_key_input = st.text_input(
+            "Enter your OpenAI API Key:",
+            type="password",
+            placeholder="sk-...",
+        )
+        if api_key_input:
+            with open("OpenAI_API.txt", "w", encoding="utf-8") as f:
+                f.write(api_key_input.strip())
+            os.environ["OPENAI_API_KEY"] = api_key_input.strip()
+            st.session_state["OPENAI_API_KEY"] = api_key_input.strip()
+            st.success("API Key saved and loaded.")
+            return True
+        else:
+            st.warning("Please enter your OpenAI API key to continue.")
+            return False
+    else:
+        os.environ["OPENAI_API_KEY"] = st.session_state["OPENAI_API_KEY"]
+        return True
+
+# Load and initialize OpenAI client
+def init_openai_client():
+    with open("OpenAI_API.txt", "r", encoding="utf-8") as f:
+        os.environ["OPENAI_API_KEY"] = f.readline().strip()
+    return OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+
 def main():
     st.title("Competitive Analysis")
+
+    if not get_and_store_api_key():
+        return  # Exit early if no API key provided
+    client = init_openai_client()
+
 
     # 1) Load data
     df = load_dataset("Poland_desc_Industries_final.xlsx")
